@@ -1,0 +1,236 @@
+%% ============================================================
+%  AMPLIFICADOR DE 3 ETAPAS
+%  EC1 -> EC2 -> CC
+% ============================================================
+
+clear; clc; close all;
+
+fprintf('\n=== AMPLIFICADOR DE 3 ETAPAS ===\n');
+
+leer = @(txt) convertir(input(txt,'s'));
+paralelo = @(Ra,Rb) (Ra.*Rb)./(Ra+Rb);
+
+%% ============================================================
+% PARAMETROS GENERALES
+%% ============================================================
+
+Vcc  = leer('Ingrese Vcc (V): ');
+beta1 = leer('Ingrese beta del transistor de la etapa 1: ');
+beta2 = leer('Ingrese beta del transistorde la etapa 2 ');
+beta3 = leer('Ingrese beta del transistor de la etapa 3 ');
+
+%% ============================================================
+% ETAPA 1 - EMISOR COMUN
+%% ============================================================
+
+fprintf('\n----- ETAPA 1 (EMISOR COMUN) -----\n');
+
+R1_1 = leer('R1 etapa1: ');
+R2_1 = leer('R2 etapa1: ');
+RC1  = leer('RC etapa1: ');
+
+RE1a = leer('RE sin bypass etapa1: ');
+RE1b = leer('RE bypass etapa1: ');
+
+RE1 = RE1a + RE1b;
+
+Vth1 = Vcc*(R2_1/(R1_1+R2_1));
+Rth1 = paralelo(R1_1,R2_1);
+
+Ib1 = (Vth1-0.7)/(Rth1+(beta1+1)*RE1);
+Ic1 = beta1*Ib1;
+Ie1 = Ic1+Ib1;
+
+re1 = 0.026/Ie1;
+
+Ve1 = Ie1*RE1;
+Vc1 = Vcc - Ic1*RC1;
+Vce1 = Vc1 - Ve1;
+
+%% ============================================================
+% ETAPA 2 - EMISOR COMUN
+%% ============================================================
+
+fprintf('\n----- ETAPA 2 (EMISOR COMUN) -----\n');
+
+R1_2 = leer('R1 etapa2: ');
+R2_2 = leer('R2 etapa2: ');
+RC2  = leer('RC etapa2: ');
+
+RE2a = leer('RE sin bypass etapa2: ');
+RE2b = leer('RE bypass etapa2: ');
+
+RE2 = RE2a + RE2b;
+
+Vth2 = Vcc*(R2_2/(R1_2+R2_2));
+Rth2 = paralelo(R1_2,R2_2);
+
+Ib2 = (Vth2-0.7)/(Rth2+(beta2+1)*RE2);
+Ic2 = beta2*Ib2;
+Ie2 = Ic2+Ib2;
+
+re2 = 0.026/Ie2;
+
+Ve2 = Ie2*RE2;
+Vc2 = Vcc - Ic2*RC2;
+Vce2 = Vc2 - Ve2;
+
+%% ============================================================
+% ETAPA 3 - COLECTOR COMUN
+%% ============================================================
+
+fprintf('\n----- ETAPA 3 (COLECTOR COMUN) -----\n');
+
+R1_3 = leer('R1 etapa3: ');
+R2_3 = leer('R2 etapa3: ');
+RE3  = leer('RE etapa3: ');
+RL   = leer('RL final: ');
+
+Vth3 = Vcc*(R2_3/(R1_3+R2_3));
+Rth3 = paralelo(R1_3,R2_3);
+
+Ib3 = (Vth3-0.7)/(Rth3+(beta3+1)*RE3);
+
+Ic3 = beta3*Ib3;
+Ie3 = Ic3+Ib3;
+
+re3 = 0.026/Ie3;
+
+Ve3 = Ie3*RE3;
+Vce3 = Vcc - Ve3;
+
+%% ============================================================
+% RESISTENCIAS ENTRE ETAPAS
+%% ============================================================
+
+Rin2 = paralelo(Rth2, beta2*(re2+RE2a));
+Rin3 = paralelo(Rth3,(beta3+1)*(re3+RE3));
+
+%% ============================================================
+% GANANCIAS
+%% ============================================================
+
+RC1_total = paralelo(RC1,Rin2);
+Av1 = -RC1_total/(re1+RE1a);
+
+RC2_total = paralelo(RC2,Rin3);
+Av2 = -RC2_total/(re2+RE2a);
+
+RE_total3 = paralelo(RE3,RL);
+Av3 = RE_total3/(RE_total3+re3);
+
+Av_total = Av1*Av2*Av3;
+
+%% ============================================================
+% RESULTADOS NUMERICOS
+%% ============================================================
+
+fprintf('\n============= RESULTADOS =============\n');
+
+fprintf('\nGanancia etapa1 = %.2f\n',Av1);
+fprintf('Ganancia etapa2 = %.2f\n',Av2);
+fprintf('Ganancia etapa3 = %.2f\n',Av3);
+
+fprintf('\nGANANCIA TOTAL = %.2f\n',Av_total);
+
+fprintf('\n--- PUNTOS Q ---\n');
+
+fprintf('\nEtapa1: Vce = %.3f V   Ic = %.5f A\n',Vce1,Ic1);
+fprintf('Etapa2: Vce = %.3f V   Ic = %.5f A\n',Vce2,Ic2);
+fprintf('Etapa3: Vce = %.3f V   Ic = %.5f A\n',Vce3,Ic3);
+
+%% ============================================================
+% TABLA RESUMEN
+%% ============================================================
+
+Resultados = table( ...
+Av1,Av2,Av3,Av_total,...
+Vce1,Vce2,Vce3,...
+Ic1,Ic2,Ic3,...
+'VariableNames',{'Av_E1','Av_E2','Av_E3','Av_Total',...
+'Vce1','Vce2','Vce3','Ic1','Ic2','Ic3'});
+
+fprintf('\n================ TABLA RESUMEN ================\n');
+disp(Resultados)
+
+%% ============================================================
+% GRAFICA ETAPA 1
+%% ============================================================
+
+figure
+
+Vce_linea = linspace(0,Vcc,200);
+Ic_linea = (Vcc - Vce_linea)/RC1;
+
+plot(Vce_linea,Ic_linea,'LineWidth',2)
+hold on
+plot(Vce1,Ic1,'ro','MarkerSize',10,'LineWidth',2)
+
+title('Recta de carga - Etapa 1')
+xlabel('VCE (V)')
+ylabel('IC (A)')
+grid on
+
+%% ============================================================
+% GRAFICA ETAPA 2
+%% ============================================================
+
+figure
+
+Ic_linea = (Vcc - Vce_linea)/RC2;
+
+plot(Vce_linea,Ic_linea,'LineWidth',2)
+hold on
+plot(Vce2,Ic2,'ro','MarkerSize',10,'LineWidth',2)
+
+title('Recta de carga - Etapa 2')
+xlabel('VCE (V)')
+ylabel('IC (A)')
+grid on
+
+%% ============================================================
+% GRAFICA ETAPA 3
+%% ============================================================
+
+figure
+
+Ic_linea = (Vcc - Vce_linea)/RE3;
+
+plot(Vce_linea,Ic_linea,'LineWidth',2)
+hold on
+plot(Vce3,Ic3,'ro','MarkerSize',10,'LineWidth',2)
+
+title('Recta de carga - Etapa 3 (Colector Comun)')
+xlabel('VCE (V)')
+ylabel('IC (A)')
+grid on
+
+%% ============================================================
+% FUNCION PARA INTERPRETAR PREFIJOS
+%% ============================================================
+
+function val = convertir(str)
+
+str = lower(str);
+str = strrep(str,' ',''); 
+
+if endsWith(str,'k')
+val = str2double(strrep(str,'k',''))*1e3;
+
+elseif endsWith(str,'meg')
+val = str2double(strrep(str,'meg',''))*1e6;
+
+elseif endsWith(str,'m')
+val = str2double(strrep(str,'m',''))*1e-3;
+
+elseif endsWith(str,'u')
+val = str2double(strrep(str,'u',''))*1e-6;
+
+elseif endsWith(str,'n')
+val = str2double(strrep(str,'n',''))*1e-9;
+
+else
+val = str2double(str);
+end
+
+end
