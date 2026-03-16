@@ -11,4 +11,9 @@ El proyecto incluye:
 
 ---
 
-## 📂 Estructura del repositorio
+## Miembros - Equipo 2
+- Yeny Betancourt
+- Caleth Godoy
+- Franllely Marquina
+- Luis Miguel Cervantes
+- Wil Villamil
